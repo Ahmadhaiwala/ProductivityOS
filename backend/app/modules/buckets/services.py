@@ -26,7 +26,10 @@ class BucketService:
     @staticmethod
     def get_bucket(db: Session, bucket_id: int) -> Bucket | None:
         return db.query(Bucket).filter(Bucket.id == bucket_id).first()
+    
 
+    #still need to optimize it the .all() thing is not at all optmized if there are 100's of bucket then it could cause issues so we need to add pagination 
+    #will add that later
     @staticmethod
     def get_user_buckets(db: Session, user_id: int) -> list[Bucket]:
         return db.query(Bucket).filter(Bucket.user_id == user_id).order_by(Bucket.position).all()
@@ -45,7 +48,7 @@ class BucketService:
             db.commit()
             db.refresh(bucket)
         return bucket
-
+    #  needs to again check the query redesign a bit for cascading which could in future cause performance issue
     @staticmethod
     def delete_bucket(db: Session, bucket_id: int) -> bool:
         bucket = db.query(Bucket).filter(Bucket.id == bucket_id).first()
