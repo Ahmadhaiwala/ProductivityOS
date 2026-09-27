@@ -35,3 +35,5 @@ export interface Task {
   deadline: string;
   done: boolean;
 }
+
+
