@@ -1,13 +1,121 @@
 import './styles/index.css';
-import { Sidebar, Topbar, CurrentFocus, TodayMission, MonthCalendar } from './components';
-import { tasks, navSections } from './data/mockData';
+import { useState } from 'react';
+import { 
+  Sidebar, 
+  Topbar, 
+  CurrentFocus, 
+  TodayMission, 
+  MonthCalendar,
+  CompletionFeedback,
+  TaskNeedsAttention,
+  RescheduleModal,
+  RedefineModal,
+  BreakdownModal,
+} from './components';
+import { tasks as initialTasks, navSections } from './data/mockData';
+import type { Task } from './types';
 
 function App() {
-  // Get current focus task (first incomplete high priority task)
-  const currentFocusTask = tasks.find(t => !t.done && t.importance === 'high') || null;
+  const [tasks, setTasks] = useState(initialTasks);
+  const [currentFocusTask, setCurrentFocusTask] = useState<Task | null>(
+    tasks.find(t => !t.done && t.importance === 'high') || null
+  );
   
-  // Get today's tasks (all tasks)
+  // Modal states
+  const [showCompletionFeedback, setShowCompletionFeedback] = useState(false);
+  const [showTaskAttention, setShowTaskAttention] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [showRedefine, setShowRedefine] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [completedTask, setCompletedTask] = useState<Task | null>(null);
+
+  // Get today's tasks
   const todayTasks = tasks;
+  const completedCount = tasks.filter(t => t.done).length;
+
+  // Handle task completion
+  const handleCompleteTask = (task: Task) => {
+    setTasks(tasks.map(t => t.id === task.id ? { ...t, done: true } : t));
+    setCompletedTask(task);
+    setShowCompletionFeedback(true);
+    setCurrentFocusTask(null);
+  };
+
+  // Handle next focus selection
+  const handleMakeFocus = (task: Task) => {
+    setCurrentFocusTask(task);
+    setShowCompletionFeedback(false);
+  };
+
+  // Handle "can't complete" scenario
+  const handleCantComplete = () => {
+    setShowTaskAttention(true);
+  };
+
+  // Handle reschedule
+  const handleReschedule = (task: Task) => {
+    setShowTaskAttention(false);
+    setShowReschedule(true);
+  };
+
+  const handleRescheduleConfirm = (newDeadline: string) => {
+    if (currentFocusTask) {
+      setTasks(tasks.map(t => 
+        t.id === currentFocusTask.id ? { ...t, deadline: newDeadline } : t
+      ));
+      setCurrentFocusTask({ ...currentFocusTask, deadline: newDeadline });
+    }
+    setShowReschedule(false);
+  };
+
+  // Handle redefine
+  const handleRedefine = (task: Task) => {
+    setShowTaskAttention(false);
+    setShowRedefine(true);
+  };
+
+  const handleRedefineConfirm = (newTitle: string, newDeadline: string, reason: string) => {
+    if (currentFocusTask) {
+      setTasks(tasks.map(t => 
+        t.id === currentFocusTask.id ? { ...t, title: newTitle, deadline: newDeadline } : t
+      ));
+      setCurrentFocusTask({ ...currentFocusTask, title: newTitle, deadline: newDeadline });
+      console.log('Redefine reason:', reason);
+    }
+    setShowRedefine(false);
+  };
+
+  // Handle breakdown
+  const handleBreakdown = (task: Task) => {
+    setShowTaskAttention(false);
+    setShowBreakdown(true);
+  };
+
+  const handleBreakdownConfirm = (subtasks: string[]) => {
+    console.log('Breaking down into subtasks:', subtasks);
+    // In a real app, create new tasks here
+    setShowBreakdown(false);
+  };
+
+  // Handle fallback (simplified for now)
+  const handleFallback = (task: Task) => {
+    console.log('Using fallback for:', task.title);
+    setShowTaskAttention(false);
+  };
+
+  // Handle abandon
+  const handleAbandon = (task: Task) => {
+    if (confirm(`Are you sure you want to abandon "${task.title}"?`)) {
+      setTasks(tasks.filter(t => t.id !== task.id));
+      setCurrentFocusTask(null);
+      setShowTaskAttention(false);
+    }
+  };
+
+  // Get next task suggestion
+  const nextSuggestion = tasks.find(
+    t => !t.done && t.id !== completedTask?.id && t.importance === 'high'
+  ) || null;
 
   return (
     <div className="app-layout">
@@ -16,10 +124,12 @@ function App() {
         <Topbar />
         <main className="page-content">
           <div className="dashboard-grid">
-            {/* Current Focus - Takes full width and priority */}
-            <CurrentFocus task={currentFocusTask} />
+            <CurrentFocus 
+              task={currentFocusTask} 
+              onComplete={handleCompleteTask}
+              onCantComplete={handleCantComplete}
+            />
             
-            {/* Two column grid for Today's Mission and Calendar */}
             <div className="dashboard-grid-2col">
               <TodayMission tasks={todayTasks} />
               <MonthCalendar />
@@ -27,6 +137,57 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Modals */}
+      {showCompletionFeedback && completedTask && (
+        <CompletionFeedback
+          completedTask={completedTask}
+          nextSuggestion={nextSuggestion}
+          todayStats={{
+            completed: completedCount,
+            total: tasks.length,
+            focusTime: '2h 15m',
+          }}
+          onClose={() => setShowCompletionFeedback(false)}
+          onMakeFocus={handleMakeFocus}
+        />
+      )}
+
+      {showTaskAttention && currentFocusTask && (
+        <TaskNeedsAttention
+          task={currentFocusTask}
+          onClose={() => setShowTaskAttention(false)}
+          onReschedule={handleReschedule}
+          onRedefine={handleRedefine}
+          onBreakdown={handleBreakdown}
+          onFallback={handleFallback}
+          onAbandon={handleAbandon}
+        />
+      )}
+
+      {showReschedule && currentFocusTask && (
+        <RescheduleModal
+          task={currentFocusTask}
+          onClose={() => setShowReschedule(false)}
+          onConfirm={handleRescheduleConfirm}
+        />
+      )}
+
+      {showRedefine && currentFocusTask && (
+        <RedefineModal
+          task={currentFocusTask}
+          onClose={() => setShowRedefine(false)}
+          onConfirm={handleRedefineConfirm}
+        />
+      )}
+
+      {showBreakdown && currentFocusTask && (
+        <BreakdownModal
+          task={currentFocusTask}
+          onClose={() => setShowBreakdown(false)}
+          onConfirm={handleBreakdownConfirm}
+        />
+      )}
     </div>
   );
 }

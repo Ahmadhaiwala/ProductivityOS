@@ -1,11 +1,13 @@
-import { Play, Pause, CheckCircle, Edit, Calendar, MoreHorizontal } from 'lucide-react';
+import { Play, CheckCircle, AlertCircle, Edit, Calendar, MoreHorizontal } from 'lucide-react';
 import type { Task } from '../../types';
 
 interface CurrentFocusProps {
   task: Task | null;
+  onComplete?: (task: Task) => void;
+  onCantComplete?: () => void;
 }
 
-export function CurrentFocus({ task }: CurrentFocusProps) {
+export function CurrentFocus({ task, onComplete, onCantComplete }: CurrentFocusProps) {
   if (!task) {
     return (
       <div className="card" style={{ minHeight: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -68,26 +70,33 @@ export function CurrentFocus({ task }: CurrentFocusProps) {
         )}
 
         <div className="focus-actions">
-          {!task.done && (
+          {!task.done ? (
             <>
               <button className="btn btn-accent">
                 <Play size={16} />
                 Start Focus
               </button>
-              <button className="btn btn-primary">
+              <button 
+                className="btn btn-primary"
+                onClick={() => onComplete?.(task)}
+              >
                 <CheckCircle size={16} />
                 Complete
               </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={onCantComplete}
+              >
+                <AlertCircle size={16} />
+                Can't Complete
+              </button>
             </>
+          ) : (
+            <button className="btn btn-primary">
+              <CheckCircle size={16} />
+              Completed
+            </button>
           )}
-          <button className="btn btn-secondary">
-            <Edit size={16} />
-            Edit
-          </button>
-          <button className="btn btn-secondary">
-            <Calendar size={16} />
-            Reschedule
-          </button>
           <button className="btn btn-ghost">
             <MoreHorizontal size={16} />
           </button>

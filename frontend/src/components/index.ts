@@ -6,3 +6,10 @@ export { Topbar } from './layout/Topbar';
 export { CurrentFocus } from './dashboard/CurrentFocus';
 export { TodayMission } from './dashboard/TodayMission';
 export { MonthCalendar } from './dashboard/MonthCalendar';
+
+// Modal components
+export { CompletionFeedback } from './modals/CompletionFeedback';
+export { TaskNeedsAttention } from './modals/TaskNeedsAttention';
+export { RescheduleModal } from './modals/RescheduleModal';
+export { RedefineModal } from './modals/RedefineModal';
+export { BreakdownModal } from './modals/BreakdownModal';
