@@ -1,21 +1,30 @@
-import './index.css';
-import './App.css';
-import { Sidebar, Topbar, PageHeader, StatsSection, TasksSection } from './components';
-import { stats, buckets, tasks, navSections } from './data/mockData';
+import './styles/index.css';
+import { Sidebar, Topbar, CurrentFocus, TodayMission, MonthCalendar } from './components';
+import { tasks, navSections } from './data/mockData';
 
 function App() {
+  // Get current focus task (first incomplete high priority task)
+  const currentFocusTask = tasks.find(t => !t.done && t.importance === 'high') || null;
+  
+  // Get today's tasks (all tasks)
+  const todayTasks = tasks;
+
   return (
     <div className="app-layout">
       <Sidebar navSections={navSections} />
       <div className="main-wrapper">
         <Topbar />
-        <main className="page-content" id="main-content">
-          <PageHeader 
-            title="Dashboard" 
-            description="Here's what's on your plate today — stay focused and keep moving forward."
-          />
-          <StatsSection stats={stats} />
-          <TasksSection tasks={tasks} buckets={buckets} />
+        <main className="page-content">
+          <div className="dashboard-grid">
+            {/* Current Focus - Takes full width and priority */}
+            <CurrentFocus task={currentFocusTask} />
+            
+            {/* Two column grid for Today's Mission and Calendar */}
+            <div className="dashboard-grid-2col">
+              <TodayMission tasks={todayTasks} />
+              <MonthCalendar />
+            </div>
+          </div>
         </main>
       </div>
     </div>
