@@ -1,6 +1,10 @@
 import { Bell, Plus, Search } from 'lucide-react';
 
-export function Topbar() {
+interface TopbarProps {
+  onNewTask: () => void;
+}
+
+export function Topbar({ onNewTask }: TopbarProps) {
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
 
@@ -36,7 +40,7 @@ export function Topbar() {
         <button className="icon-btn">
           <Bell size={18} />
         </button>
-        <button className="btn btn-accent">
+        <button className="btn btn-accent" onClick={onNewTask}>
           <Plus size={16} />
           New Task
         </button>

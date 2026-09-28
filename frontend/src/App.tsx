@@ -11,6 +11,7 @@ import {
   RescheduleModal,
   RedefineModal,
   BreakdownModal,
+  CreateTaskModal,
 } from './components';
 import { tasks as initialTasks, navSections } from './data/mockData';
 import type { Task } from './types';
@@ -27,11 +28,27 @@ function App() {
   const [showReschedule, setShowReschedule] = useState(false);
   const [showRedefine, setShowRedefine] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showCreateTask, setShowCreateTask] = useState(false);
   const [completedTask, setCompletedTask] = useState<Task | null>(null);
 
-  // Get today's tasks
+  // Get today's tasks and buckets
   const todayTasks = tasks;
   const completedCount = tasks.filter(t => t.done).length;
+  const availableBuckets = ['Development', 'College', 'Career', 'Personal', 'Projects'];
+
+  // Handle task creation
+  const handleCreateTask = (newTask: any) => {
+    const task: Task = {
+      id: Date.now(),
+      title: newTask.title,
+      bucket: newTask.bucket,
+      importance: newTask.importance || 'medium',
+      deadline: newTask.deadline,
+      done: false,
+    };
+    setTasks([...tasks, task]);
+    setShowCreateTask(false);
+  };
 
   // Handle task completion
   const handleCompleteTask = (task: Task) => {
@@ -121,7 +138,7 @@ function App() {
     <div className="app-layout">
       <Sidebar navSections={navSections} />
       <div className="main-wrapper">
-        <Topbar />
+        <Topbar onNewTask={() => setShowCreateTask(true)} />
         <main className="page-content">
           <div className="dashboard-grid">
             <CurrentFocus 
@@ -139,6 +156,14 @@ function App() {
       </div>
 
       {/* Modals */}
+      {showCreateTask && (
+        <CreateTaskModal
+          onClose={() => setShowCreateTask(false)}
+          onConfirm={handleCreateTask}
+          buckets={availableBuckets}
+        />
+      )}
+
       {showCompletionFeedback && completedTask && (
         <CompletionFeedback
           completedTask={completedTask}
