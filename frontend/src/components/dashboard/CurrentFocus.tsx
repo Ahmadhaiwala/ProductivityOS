@@ -1,4 +1,4 @@
-import { Play, CheckCircle, AlertCircle, Edit, Calendar, MoreHorizontal } from 'lucide-react';
+import { Play, CheckCircle, AlertCircle, Edit, Calendar, MoreHorizontal, Target } from 'lucide-react';
 import type { Task } from '../../types';
 
 interface CurrentFocusProps {
@@ -29,7 +29,7 @@ export function CurrentFocus({ task, onComplete, onCantComplete }: CurrentFocusP
   return (
     <div className="current-focus-card">
       <div className="focus-badge">
-        <span>🎯</span>
+        <Target size={14} />
         <span>Current Focus</span>
       </div>
 

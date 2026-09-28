@@ -1,4 +1,4 @@
-import { CheckCircle, TrendingUp, Clock, Target } from 'lucide-react';
+import { CheckCircle, TrendingUp, Clock, Target, ArrowRight, PartyPopper } from 'lucide-react';
 import type { Task } from '../../types';
 
 interface CompletionFeedbackProps {
@@ -82,6 +82,7 @@ export function CompletionFeedback({
                   className="btn btn-accent btn-lg w-full"
                   onClick={() => onMakeFocus(nextSuggestion)}
                 >
+                  <Target size={16} />
                   Make This My Focus
                 </button>
                 <button className="btn btn-ghost" onClick={onClose}>
@@ -92,7 +93,8 @@ export function CompletionFeedback({
           ) : (
             <div className="completion-actions">
               <button className="btn btn-accent btn-lg" onClick={onClose}>
-                All Done for Today! 🎉
+                <PartyPopper size={16} />
+                All Done for Today!
               </button>
             </div>
           )}

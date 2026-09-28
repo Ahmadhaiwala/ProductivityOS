@@ -1,4 +1,4 @@
-import { Bell, Plus, Search } from 'lucide-react';
+import { Bell, Plus, Search, User } from 'lucide-react';
 
 interface TopbarProps {
   onNewTask: () => void;
@@ -12,7 +12,7 @@ export function Topbar({ onNewTask }: TopbarProps) {
     <header className="topbar">
       <div className="topbar-left">
         <div>
-          <div className="topbar-title">{greeting}, Ahmad 👋</div>
+          <div className="topbar-title">{greeting}, Ahmad <User size={18} style={{ display: 'inline', marginLeft: '4px' }} /></div>
           <div className="topbar-subtitle">Here's your plan for today. Stay consistent.</div>
         </div>
       </div>
