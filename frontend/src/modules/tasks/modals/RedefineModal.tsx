@@ -1,6 +1,6 @@
 import { X, Edit, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
-import type { Task } from '../../types';
+import type { Task } from '../../../types';
 
 interface RedefineModalProps {
   task: Task;

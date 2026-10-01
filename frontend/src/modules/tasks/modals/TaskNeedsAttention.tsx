@@ -6,7 +6,7 @@ import {
   X, 
   AlertCircle 
 } from 'lucide-react';
-import type { Task } from '../../types';
+import type { Task } from '../../../types';
 
 interface TaskNeedsAttentionProps {
   task: Task;

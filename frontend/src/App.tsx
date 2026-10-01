@@ -1,5 +1,5 @@
 import './styles/index.css';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   Sidebar, 
   Topbar, 
@@ -14,6 +14,7 @@ import {
   CreateTaskModal,
 } from './components';
 import { tasks as initialTasks, navSections } from './data/mockData';
+import { formatDateToYMD } from './modules/calendar/utils/dateUtils';
 import type { Task } from './types';
 
 function App() {
@@ -35,6 +36,34 @@ function App() {
   const todayTasks = tasks;
   const completedCount = tasks.filter(t => t.done).length;
   const availableBuckets = ['Development', 'College', 'Career', 'Personal', 'Projects'];
+
+  // Calculate task counts per date (YYYY-MM-DD format) for calendar
+  const taskCountsByDate = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // For now, mock some dates with task counts
+    // In real implementation, you'd calculate this from actual task deadlines
+    const today = new Date();
+    const todayYMD = formatDateToYMD(today);
+    counts[todayYMD] = tasks.length;
+    
+    // Add some mock dates
+    const mockDate1 = new Date(today);
+    mockDate1.setDate(today.getDate() + 2);
+    counts[formatDateToYMD(mockDate1)] = 3;
+    
+    const mockDate2 = new Date(today);
+    mockDate2.setDate(today.getDate() + 5);
+    counts[formatDateToYMD(mockDate2)] = 2;
+    
+    return counts;
+  }, [tasks]);
+
+  // Handle date selection from calendar
+  const handleDateSelect = (dateYMD: string) => {
+    console.log('Selected date:', dateYMD);
+    // Future: Filter tasks by selected date
+  };
 
   // Handle task creation
   const handleCreateTask = (newTask: any) => {
@@ -70,7 +99,7 @@ function App() {
   };
 
   // Handle reschedule
-  const handleReschedule = (task: Task) => {
+  const handleReschedule = () => {
     setShowTaskAttention(false);
     setShowReschedule(true);
   };
@@ -86,7 +115,7 @@ function App() {
   };
 
   // Handle redefine
-  const handleRedefine = (task: Task) => {
+  const handleRedefine = () => {
     setShowTaskAttention(false);
     setShowRedefine(true);
   };
@@ -103,18 +132,17 @@ function App() {
   };
 
   // Handle breakdown
-  const handleBreakdown = (task: Task) => {
+  const handleBreakdown = () => {
     setShowTaskAttention(false);
     setShowBreakdown(true);
   };
 
   const handleBreakdownConfirm = (subtasks: string[]) => {
     console.log('Breaking down into subtasks:', subtasks);
-    // In a real app, create new tasks here
     setShowBreakdown(false);
   };
 
-  // Handle fallback (simplified for now)
+  // Handle fallback
   const handleFallback = (task: Task) => {
     console.log('Using fallback for:', task.title);
     setShowTaskAttention(false);
@@ -149,7 +177,10 @@ function App() {
             
             <div className="dashboard-grid-2col">
               <TodayMission tasks={todayTasks} />
-              <MonthCalendar />
+              <MonthCalendar 
+                taskCounts={taskCountsByDate}
+                onDateSelect={handleDateSelect}
+              />
             </div>
           </div>
         </main>

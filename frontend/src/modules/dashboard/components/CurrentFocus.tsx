@@ -1,5 +1,5 @@
-import { Play, CheckCircle, AlertCircle, Edit, Calendar, MoreHorizontal, Target } from 'lucide-react';
-import type { Task } from '../../types';
+import { Play, CheckCircle, AlertCircle, MoreHorizontal, Target } from 'lucide-react';
+import type { Task } from '../../../types';
 
 interface CurrentFocusProps {
   task: Task | null;

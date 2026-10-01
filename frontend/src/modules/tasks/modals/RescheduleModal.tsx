@@ -1,6 +1,6 @@
 import { X, Calendar, Clock } from 'lucide-react';
 import { useState } from 'react';
-import type { Task } from '../../types';
+import type { Task } from '../../../types';
 
 interface RescheduleModalProps {
   task: Task;
@@ -9,12 +9,10 @@ interface RescheduleModalProps {
 }
 
 export function RescheduleModal({ task, onClose, onConfirm }: RescheduleModalProps) {
-  const [selectedOption, setSelectedOption] = useState<string>('');
   const [customDate, setCustomDate] = useState('');
   const [customTime, setCustomTime] = useState('');
 
   const handleQuickReschedule = (option: string) => {
-    setSelectedOption(option);
     const deadlines: Record<string, string> = {
       tomorrow: 'Tomorrow, 9:00 AM',
       weekend: 'This Weekend',

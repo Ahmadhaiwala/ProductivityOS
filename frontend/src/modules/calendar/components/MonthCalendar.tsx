@@ -1,48 +1,42 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCalendar } from '../hooks/useCalendar';
+import { getMonthName } from '../utils/dateUtils';
 
-export function MonthCalendar() {
-  // Mock data - will be dynamic later
-  const currentMonth = 'September 2026';
-  const daysInMonth = 30;
-  const firstDayOffset = 4; // September 1, 2026 is Friday (4th day in week starting Monday)
+interface MonthCalendarProps {
+  taskCounts?: Record<string, number>;
+  onDateSelect?: (date: string) => void;
+}
 
-  const taskCounts: Record<number, number> = {
-    27: 6,
-    28: 4,
-    29: 3,
-    30: 2,
+export function MonthCalendar({ taskCounts = {}, onDateSelect }: MonthCalendarProps) {
+  const {
+    visibleYear,
+    visibleMonth,
+    selectedDate,
+    weeks,
+    goToPreviousMonth,
+    goToNextMonth,
+    selectDate,
+  } = useCalendar(taskCounts);
+
+  const handleDateClick = (date: string) => {
+    selectDate(date);
+    onDateSelect?.(date);
   };
-
-  const weeks = [];
-  let currentWeek: (number | null)[] = Array(firstDayOffset).fill(null);
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    currentWeek.push(day);
-    
-    if (currentWeek.length === 7) {
-      weeks.push(currentWeek);
-      currentWeek = [];
-    }
-  }
-
-  if (currentWeek.length > 0) {
-    while (currentWeek.length < 7) {
-      currentWeek.push(null);
-    }
-    weeks.push(currentWeek);
-  }
 
   return (
     <div className="card">
+      {/* Calendar Header */}
       <div className="section-header">
         <div>
-          <h3 className="section-title">{currentMonth}</h3>
+          <h3 className="section-title">
+            {getMonthName(visibleMonth)} {visibleYear}
+          </h3>
         </div>
         <div className="flex gap-2">
-          <button className="icon-btn">
+          <button className="icon-btn" onClick={goToPreviousMonth} aria-label="Previous month">
             <ChevronLeft size={16} />
           </button>
-          <button className="icon-btn">
+          <button className="icon-btn" onClick={goToNextMonth} aria-label="Next month">
             <ChevronRight size={16} />
           </button>
         </div>
@@ -50,22 +44,24 @@ export function MonthCalendar() {
 
       <div style={{ marginTop: 'var(--space-4)' }}>
         {/* Weekday Headers */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(7, 1fr)', 
-          gap: 'var(--space-2)',
-          marginBottom: 'var(--space-3)'
-        }}>
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-            <div 
-              key={day} 
-              style={{ 
-                textAlign: 'center', 
-                fontSize: '0.75rem', 
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            gap: 'var(--space-2)',
+            marginBottom: 'var(--space-3)',
+          }}
+        >
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+            <div
+              key={day}
+              style={{
+                textAlign: 'center',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 color: 'var(--text-muted)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.05em',
               }}
             >
               {day}
@@ -76,20 +72,20 @@ export function MonthCalendar() {
         {/* Calendar Grid */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {weeks.map((week, weekIndex) => (
-            <div 
+            <div
               key={weekIndex}
-              style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(7, 1fr)', 
-                gap: 'var(--space-2)'
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gap: 'var(--space-2)',
               }}
             >
-              {week.map((day, dayIndex) => (
-                <CalendarDay 
-                  key={dayIndex} 
-                  day={day} 
-                  taskCount={day ? taskCounts[day] : undefined}
-                  isToday={day === 27}
+              {week.days.map((day) => (
+                <CalendarDayCell
+                  key={day.date}
+                  day={day}
+                  isSelected={day.date === selectedDate}
+                  onClick={() => handleDateClick(day.date)}
                 />
               ))}
             </div>
@@ -100,19 +96,22 @@ export function MonthCalendar() {
   );
 }
 
-interface CalendarDayProps {
-  day: number | null;
-  taskCount?: number;
-  isToday?: boolean;
+interface CalendarDayCellProps {
+  day: {
+    date: string;
+    dayNumber: number;
+    isToday: boolean;
+    isCurrentMonth: boolean;
+    taskCount: number;
+  };
+  isSelected: boolean;
+  onClick: () => void;
 }
 
-function CalendarDay({ day, taskCount, isToday }: CalendarDayProps) {
-  if (!day) {
-    return <div style={{ aspectRatio: '1' }} />;
-  }
-
+function CalendarDayCell({ day, isSelected, onClick }: CalendarDayCellProps) {
   return (
     <div
+      onClick={onClick}
       style={{
         aspectRatio: '1',
         display: 'flex',
@@ -121,35 +120,40 @@ function CalendarDay({ day, taskCount, isToday }: CalendarDayProps) {
         justifyContent: 'center',
         padding: 'var(--space-2)',
         borderRadius: 'var(--radius-md)',
-        border: isToday ? '2px solid var(--accent)' : '1px solid var(--border)',
-        backgroundColor: isToday ? 'rgba(211, 94, 54, 0.05)' : 'transparent',
+        border: day.isToday ? '2px solid var(--accent)' : isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+        backgroundColor: day.isToday
+          ? 'rgba(211, 94, 54, 0.05)'
+          : isSelected
+          ? 'rgba(42, 67, 67, 0.05)'
+          : 'transparent',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
+        opacity: day.isCurrentMonth ? 1 : 0.4,
       }}
       className="calendar-day"
     >
-      <div 
-        style={{ 
-          fontSize: '0.875rem', 
-          fontWeight: isToday ? 700 : 500,
-          color: isToday ? 'var(--accent)' : 'var(--text-primary)',
-          marginBottom: 'var(--space-1)'
+      <div
+        style={{
+          fontSize: '0.875rem',
+          fontWeight: day.isToday || isSelected ? 700 : 500,
+          color: day.isToday ? 'var(--accent)' : day.isCurrentMonth ? 'var(--text-primary)' : 'var(--text-muted)',
+          marginBottom: day.taskCount > 0 ? 'var(--space-1)' : 0,
         }}
       >
-        {day}
+        {day.dayNumber}
       </div>
-      {taskCount !== undefined && taskCount > 0 && (
-        <div 
-          style={{ 
+      {day.taskCount > 0 && (
+        <div
+          style={{
             fontSize: '0.625rem',
             padding: '2px 6px',
             borderRadius: 'var(--radius-sm)',
             backgroundColor: 'var(--secondary)',
             color: 'var(--surface)',
-            fontWeight: 600
+            fontWeight: 600,
           }}
         >
-          {taskCount}
+          {day.taskCount > 99 ? '99+' : day.taskCount}
         </div>
       )}
     </div>

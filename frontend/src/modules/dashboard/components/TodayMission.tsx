@@ -1,5 +1,5 @@
 import { ChevronRight, Clock, Tag } from 'lucide-react';
-import type { Task } from '../../types';
+import type { Task } from '../../../types';
 
 interface TodayMissionProps {
   tasks: Task[];

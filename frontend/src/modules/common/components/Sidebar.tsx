@@ -1,5 +1,5 @@
 import { Zap } from 'lucide-react';
-import type { NavSection } from '../../types';
+import type { NavSection } from '../../../types';
 
 interface SidebarProps {
   navSections: NavSection[];

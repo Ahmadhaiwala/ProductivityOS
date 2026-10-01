@@ -1,5 +1,5 @@
-import { CheckCircle, TrendingUp, Clock, Target, ArrowRight, PartyPopper } from 'lucide-react';
-import type { Task } from '../../types';
+import { CheckCircle, TrendingUp, Clock, Target, PartyPopper } from 'lucide-react';
+import type { Task } from '../../../types';
 
 interface CompletionFeedbackProps {
   completedTask: Task;

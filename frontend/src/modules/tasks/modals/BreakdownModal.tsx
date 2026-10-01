@@ -1,6 +1,6 @@
 import { X, Plus, GitBranch, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { Task } from '../../types';
+import type { Task } from '../../../types';
 
 interface Subtask {
   id: string;
