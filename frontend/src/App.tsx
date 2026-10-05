@@ -169,19 +169,21 @@ function App() {
         <Topbar onNewTask={() => setShowCreateTask(true)} />
         <main className="page-content">
           <div className="dashboard-grid">
-            <CurrentFocus 
-              task={currentFocusTask} 
-              onComplete={handleCompleteTask}
-              onCantComplete={handleCantComplete}
-            />
-            
-            <div className="dashboard-grid-2col">
-              <TodayMission tasks={todayTasks} />
+            {/* Top Row: Current Focus + Calendar */}
+            <div className="dashboard-top-row">
+              <CurrentFocus 
+                task={currentFocusTask} 
+                onComplete={handleCompleteTask}
+                onCantComplete={handleCantComplete}
+              />
               <MonthCalendar 
                 taskCounts={taskCountsByDate}
                 onDateSelect={handleDateSelect}
               />
             </div>
+            
+            {/* Bottom Row: Today's Mission (Scrollable) */}
+            <TodayMission tasks={todayTasks} />
           </div>
         </main>
       </div>

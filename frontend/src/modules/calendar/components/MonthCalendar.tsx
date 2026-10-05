@@ -24,7 +24,7 @@ export function MonthCalendar({ taskCounts = {}, onDateSelect }: MonthCalendarPr
   };
 
   return (
-    <div className="card">
+    <div className="card calendar-card">
       {/* Calendar Header */}
       <div className="section-header">
         <div>
@@ -33,31 +33,31 @@ export function MonthCalendar({ taskCounts = {}, onDateSelect }: MonthCalendarPr
           </h3>
         </div>
         <div className="flex gap-2">
-          <button className="icon-btn" onClick={goToPreviousMonth} aria-label="Previous month">
-            <ChevronLeft size={16} />
+          <button className="icon-btn icon-btn-sm" onClick={goToPreviousMonth} aria-label="Previous month">
+            <ChevronLeft size={14} />
           </button>
-          <button className="icon-btn" onClick={goToNextMonth} aria-label="Next month">
-            <ChevronRight size={16} />
+          <button className="icon-btn icon-btn-sm" onClick={goToNextMonth} aria-label="Next month">
+            <ChevronRight size={14} />
           </button>
         </div>
       </div>
 
-      <div style={{ marginTop: 'var(--space-4)' }}>
+      <div style={{ marginTop: 'var(--space-3)' }}>
         {/* Weekday Headers */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(7, 1fr)',
-            gap: 'var(--space-2)',
-            marginBottom: 'var(--space-3)',
+            gap: 'var(--space-1)',
+            marginBottom: 'var(--space-2)',
           }}
         >
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
             <div
-              key={day}
+              key={index}
               style={{
                 textAlign: 'center',
-                fontSize: '0.75rem',
+                fontSize: '0.6875rem',
                 fontWeight: 600,
                 color: 'var(--text-muted)',
                 textTransform: 'uppercase',
@@ -70,14 +70,14 @@ export function MonthCalendar({ taskCounts = {}, onDateSelect }: MonthCalendarPr
         </div>
 
         {/* Calendar Grid */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
           {weeks.map((week, weekIndex) => (
             <div
               key={weekIndex}
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: 'var(--space-2)',
+                gap: 'var(--space-1)',
               }}
             >
               {week.days.map((day) => (
@@ -118,8 +118,8 @@ function CalendarDayCell({ day, isSelected, onClick }: CalendarDayCellProps) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-2)',
-        borderRadius: 'var(--radius-md)',
+        padding: 'var(--space-1)',
+        borderRadius: 'var(--radius-sm)',
         border: day.isToday ? '2px solid var(--accent)' : isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
         backgroundColor: day.isToday
           ? 'rgba(211, 94, 54, 0.05)'
@@ -134,10 +134,10 @@ function CalendarDayCell({ day, isSelected, onClick }: CalendarDayCellProps) {
     >
       <div
         style={{
-          fontSize: '0.875rem',
+          fontSize: '0.8125rem',
           fontWeight: day.isToday || isSelected ? 700 : 500,
           color: day.isToday ? 'var(--accent)' : day.isCurrentMonth ? 'var(--text-primary)' : 'var(--text-muted)',
-          marginBottom: day.taskCount > 0 ? 'var(--space-1)' : 0,
+          marginBottom: day.taskCount > 0 ? '2px' : 0,
         }}
       >
         {day.dayNumber}
@@ -145,12 +145,13 @@ function CalendarDayCell({ day, isSelected, onClick }: CalendarDayCellProps) {
       {day.taskCount > 0 && (
         <div
           style={{
-            fontSize: '0.625rem',
-            padding: '2px 6px',
+            fontSize: '0.5625rem',
+            padding: '1px 4px',
             borderRadius: 'var(--radius-sm)',
             backgroundColor: 'var(--secondary)',
             color: 'var(--surface)',
             fontWeight: 600,
+            lineHeight: 1,
           }}
         >
           {day.taskCount > 99 ? '99+' : day.taskCount}

@@ -10,13 +10,13 @@ interface CurrentFocusProps {
 export function CurrentFocus({ task, onComplete, onCantComplete }: CurrentFocusProps) {
   if (!task) {
     return (
-      <div className="card" style={{ minHeight: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="empty-state">
           <div className="empty-state-title">No Current Focus</div>
           <div className="empty-state-description">
             Choose one task to work on right now.
           </div>
-          <button className="btn btn-accent" style={{ marginTop: 'var(--space-4)' }}>
+          <button className="btn btn-accent" style={{ marginTop: 'var(--space-3)' }}>
             Choose Focus Task
           </button>
         </div>

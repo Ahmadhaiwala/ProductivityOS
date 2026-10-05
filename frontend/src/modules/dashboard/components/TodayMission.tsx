@@ -11,7 +11,7 @@ export function TodayMission({ tasks }: TodayMissionProps) {
   const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="card">
+    <div className="card today-mission-card">
       <div className="section-header">
         <div>
           <h3 className="section-title">Today's Mission</h3>
@@ -26,7 +26,7 @@ export function TodayMission({ tasks }: TodayMissionProps) {
       </div>
 
       {/* Progress Bar */}
-      <div style={{ marginBottom: 'var(--space-5)' }}>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
         <div className="progress-header">
           <span className="progress-label">Overall Progress</span>
           <span className="progress-percentage">{progressPercentage}%</span>
@@ -36,24 +36,26 @@ export function TodayMission({ tasks }: TodayMissionProps) {
         </div>
       </div>
 
-      {/* Task List */}
-      {tasks.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-title">No tasks for today</div>
-          <div className="empty-state-description">
-            You have a clear schedule. Add a task to get started.
+      {/* Scrollable Task List */}
+      <div className="task-list-scrollable">
+        {tasks.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-title">No tasks for today</div>
+            <div className="empty-state-description">
+              You have a clear schedule. Add a task to get started.
+            </div>
+            <button className="btn btn-accent" style={{ marginTop: 'var(--space-4)' }}>
+              Add Task
+            </button>
           </div>
-          <button className="btn btn-accent" style={{ marginTop: 'var(--space-4)' }}>
-            Add Task
-          </button>
-        </div>
-      ) : (
-        <div className="task-list">
-          {tasks.map(task => (
-            <TaskRow key={task.id} task={task} />
-          ))}
-        </div>
-      )}
+        ) : (
+          <div className="task-list">
+            {tasks.map(task => (
+              <TaskRow key={task.id} task={task} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

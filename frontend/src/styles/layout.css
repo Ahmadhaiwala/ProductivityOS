@@ -144,27 +144,45 @@
 /* Page Content */
 .page-content {
   flex: 1;
-  padding: var(--space-8);
-  max-width: 1400px;
+  padding: var(--space-6);
+  max-width: 1600px;
   width: 100%;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
 }
 
 /* Dashboard Grid */
 .dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-6);
-  margin-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  height: 100%;
+  overflow: hidden;
 }
 
+/* Top Row: Current Focus + Calendar */
+.dashboard-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  flex-shrink: 0;
+}
+
+/* Remove old 2-column grid */
 .dashboard-grid-2col {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: var(--space-6);
+  gap: var(--space-5);
 }
 
 @media (max-width: 1024px) {
+  .dashboard-top-row {
+    grid-template-columns: 1fr;
+  }
+  
   .dashboard-grid-2col {
     grid-template-columns: 1fr;
   }
