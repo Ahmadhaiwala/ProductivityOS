@@ -1,489 +1,618 @@
-# states
-Previous month
-      ↓
-visibleMonth = previous month
+# Calendar Module - Complete In-Depth Workflow Explanation
 
-Next month
-      ↓
-visibleMonth = next month
+Let me walk you through the entire calendar system from architecture to execution. I'll explain each layer and how they work together.
 
-Click date
-      ↓
-selectedDate = clicked date
+## 📁 Architecture Overview
 
-Midnight
-      ↓
-today = new current date
-
-
-# high level algo
-Calendar
+```
+Calendar Module
 │
-├── 1. Determine current date
+├── utils/              (Pure logic - no React)
+│   ├── dateUtils.ts          → Date manipulation functions
+│   └── calendarGenerator.ts  → Calendar grid generation
 │
-├── 2. Determine visible month
+├── hooks/              (React state management)
+│   └── useCalendar.ts        → Custom hook for calendar state
 │
-├── 3. Generate calendar days
-│      │
-│      ├── Find first day of month
-│      ├── Find weekday offset
-│      ├── Add previous-month days
-│      ├── Add current-month days
-│      └── Add next-month days
-│
-├── 4. Enrich each day
-│      │
-│      ├── isToday
-│      ├── isSelected
-│      ├── isCurrentMonth
-│      └── taskCount
-│
-└── 5. Render
-       │
-       ├── Calendar Header
-       ├── Weekday Header
-       └── Calendar Grid
-
-# Calendar Module — Engineering Decisions
-
-## Purpose
-
-This document records the engineering decisions and constraints for the Calendar module.
-
-The goal is to keep the calendar implementation predictable, maintainable, and independent from task-fetching/business logic.
+└── components/         (UI/Presentation)
+    └── MonthCalendar.tsx     → Visual rendering
+```
 
 ---
 
-## 1. Calendar and Task Data Are Separate
+## 🔧 Layer 1: dateUtils.ts (Foundation Layer)
 
-The Calendar component is responsible for:
+This file contains **pure utility functions** for date operations. No React, no side effects.
 
-* Generating calendar dates
-* Rendering the calendar grid
-* Managing selected date
-* Identifying today's date
-* Managing visible month
-* Displaying task counts for dates
+### Key Functions Explained:
 
-The Calendar component should **not** be responsible for fetching or managing complete task objects.
+#### 1. **formatDateToYMD(date: Date): string**
+```typescript
+formatDateToYMD(new Date('2026-10-05')) → "2026-10-05"
+```
+**Purpose**: Converts JavaScript `Date` object to standardized string format
+**Why**: We need a consistent date format for:
+- Object keys (taskCounts lookup)
+- Comparisons (isToday checks)
+- Display consistency
 
-Task fetching will be designed separately.
+#### 2. **getTodayYMD(): string**
+```typescript
+getTodayYMD() → "2026-10-05"
+```
+**Purpose**: Gets current system date as YYYY-MM-DD
+**Why**: We need to know "today" to highlight the current day in the calendar
 
-### Decision
+#### 3. **getDaysInMonth(year, month): number**
+```typescript
+getDaysInMonth(2026, 1) → 28  // February 2026
+getDaysInMonth(2028, 1) → 29  // February 2028 (leap year)
+```
+**Purpose**: Returns how many days are in a specific month
+**How it works**: 
+```typescript
+new Date(2026, 2, 0).getDate()  // Month+1, Day 0 = last day of previous month
+```
+**Why**: We need to know when to stop generating days for the current month
 
-> Calendar UI represents dates. Task data is supplied to it.
+#### 4. **getFirstDayOfMonth(year, month): number**
+```typescript
+getFirstDayOfMonth(2026, 9) → 4  // October 1, 2026 is Thursday
+// 0=Sunday, 1=Monday, ..., 6=Saturday
+```
+**Purpose**: Determines which day of the week the month starts on
+**Why**: We need this to know how many previous-month days to show before the 1st
+
+#### 5. **getPreviousMonth(year, month)**
+```typescript
+getPreviousMonth(2026, 0) → { year: 2025, month: 11 }  // Jan → Dec of prev year
+getPreviousMonth(2026, 5) → { year: 2026, month: 4 }   // Jun → May
+```
+**Purpose**: Calculates previous month, handling year boundaries
+**Why**: For calendar navigation (< button)
+
+#### 6. **getNextMonth(year, month)**
+```typescript
+getNextMonth(2026, 11) → { year: 2027, month: 0 }  // Dec → Jan of next year
+getNextMonth(2026, 5) → { year: 2026, month: 6 }   // Jun → Jul
+```
+**Purpose**: Calculates next month, handling year boundaries
+**Why**: For calendar navigation (> button)
 
 ---
 
-## 2. Calendar Day Is the Primary UI Unit
+## 🏭 Layer 2: calendarGenerator.ts (Pure Logic Layer)
 
-Each rendered calendar cell should represent one calendar date.
+This file generates the **calendar grid data** - completely independent of React.
 
-Conceptually:
+### Data Structures:
 
-```ts
-type CalendarDay = {
-  date: string;              // YYYY-MM-DD
-  dayNumber: number;
+```typescript
+interface CalendarDay {
+  date: string;              // "2026-10-05"
+  dayNumber: number;         // 5
+  isToday: boolean;          // true if current system date
+  isSelected: boolean;       // true if user clicked this date
+  isCurrentMonth: boolean;   // false for prev/next month days
+  taskCount: number;         // 0, 3, 15, 99+
+}
 
-  isToday: boolean;
-  isSelected: boolean;
-  isCurrentMonth: boolean;
+interface CalendarWeek {
+  days: CalendarDay[];       // Array of 7 CalendarDay objects
+}
+```
 
-  taskCount: number;
+### The Main Function: generateCalendarDays()
+
+This is the **core algorithm**. Let me break it down step by step:
+
+```typescript
+generateCalendarDays(
+  year: 2026,
+  month: 9,              // October (0-indexed)
+  todayYMD: "2026-10-05",
+  selectedDateYMD: null,
+  taskCounts: { "2026-10-05": 3, "2026-10-15": 2 }
+)
+```
+
+#### Step 1: Find month boundaries
+```typescript
+const firstDayWeekday = getFirstDayOfMonth(2026, 9)  // → 4 (Thursday)
+const daysInCurrentMonth = getDaysInMonth(2026, 9)   // → 31
+```
+
+**What we now know**:
+- October 2026 has 31 days
+- October 1st is a Thursday (day 4 of the week)
+
+#### Step 2: Add previous month days (fill the first week)
+```typescript
+// If October starts on Thursday (4), we need 4 cells before it
+// (Sunday=0, Monday=1, Tuesday=2, Wednesday=3)
+
+if (firstDayWeekday > 0) {  // 4 > 0, so yes
+  const prevMonth = 8;       // September
+  const prevYear = 2026;
+  const daysInPrevMonth = getDaysInMonth(2026, 8);  // → 30
+  
+  // We need days: 27, 28, 29, 30 from September
+  for (let i = 3; i >= 0; i--) {  // Loop backwards
+    const dayNumber = 30 - i;     // 27, 28, 29, 30
+    days.push({
+      date: "2026-09-27",
+      dayNumber: 27,
+      isToday: false,
+      isSelected: false,
+      isCurrentMonth: false,       // ← Important!
+      taskCount: 0
+    });
+  }
+}
+```
+
+**Result so far**:
+```
+[Sep 27] [Sep 28] [Sep 29] [Sep 30] [Oct 1] [Oct 2] [Oct 3]
+```
+
+#### Step 3: Add all current month days
+```typescript
+for (let day = 1; day <= 31; day++) {  // October 1-31
+  const dateStr = createDateString(2026, 9, day);  // "2026-10-01", etc.
+  
+  days.push({
+    date: dateStr,
+    dayNumber: day,
+    isToday: dateStr === "2026-10-05",      // Check if today
+    isSelected: dateStr === null,            // Check if selected
+    isCurrentMonth: true,                    // ← This is October
+    taskCount: taskCounts[dateStr] || 0      // Lookup task count
+  });
+}
+```
+
+**State after current month**:
+```
+Week 1: [Sep 27] [Sep 28] [Sep 29] [Sep 30] [Oct 1] [Oct 2] [Oct 3]
+Week 2: [Oct 4] [Oct 5] [Oct 6] ... [Oct 10]
+Week 3: [Oct 11] ... [Oct 17]
+Week 4: [Oct 18] ... [Oct 24]
+Week 5: [Oct 25] ... [Oct 31] → Only 7 days filled
+```
+
+#### Step 4: Fill remaining cells with next month
+```typescript
+// Total cells needed: 6 weeks × 7 days = 42 cells
+const remainingCells = 42 - days.length;  // How many more do we need?
+
+for (let day = 1; day <= remainingCells; day++) {
+  days.push({
+    date: "2026-11-01",  // November days
+    dayNumber: day,
+    isToday: false,
+    isSelected: false,
+    isCurrentMonth: false,  // ← Not October
+    taskCount: 0
+  });
+}
+```
+
+**Final grid (42 cells)**:
+```
+Week 1: [Sep 27] [Sep 28] [Sep 29] [Sep 30] [Oct 1] [Oct 2] [Oct 3]
+Week 2: [Oct 4] [Oct 5*] [Oct 6] [Oct 7] [Oct 8] [Oct 9] [Oct 10]
+Week 3: [Oct 11] [Oct 12] [Oct 13] [Oct 14] [Oct 15] [Oct 16] [Oct 17]
+Week 4: [Oct 18] [Oct 19] [Oct 20] [Oct 21] [Oct 22] [Oct 23] [Oct 24]
+Week 5: [Oct 25] [Oct 26] [Oct 27] [Oct 28] [Oct 29] [Oct 30] [Oct 31]
+Week 6: [Nov 1] [Nov 2] [Nov 3] [Nov 4] [Nov 5] [Nov 6] [Nov 7]
+
+* = isToday
+```
+
+#### Step 5: Group into weeks
+```typescript
+for (let i = 0; i < days.length; i += 7) {
+  weeks.push({
+    days: days.slice(i, i + 7)  // Take 7 days at a time
+  });
+}
+
+return weeks;  // 6 weeks total
+```
+
+**Why pure function?**
+- No side effects
+- Same inputs → same output
+- Easy to test: `expect(generateCalendarDays(2026, 9, ...)).toEqual([...])`
+- Can run on server, in tests, anywhere
+
+---
+
+## ⚛️ Layer 3: useCalendar.ts (React State Management)
+
+This hook **manages the calendar's state** and **calls the pure functions**.
+
+### State Management:
+
+```typescript
+// 1. Track today (updates at midnight)
+const [todayYMD, setTodayYMD] = useState(getTodayYMD());
+
+// 2. Track visible month (changes with < > buttons)
+const [visibleYear, setVisibleYear] = useState(2026);
+const [visibleMonth, setVisibleMonth] = useState(9);  // October
+
+// 3. Track selected date (changes on click)
+const [selectedDate, setSelectedDate] = useState<string | null>(null);
+```
+
+**Key Principle**: These three states are **independent**!
+
+```
+Today:    October 5, 2026
+Selected: October 15, 2026
+Viewing:  December 2026
+
+^ All three can be different!
+```
+
+### Calendar Generation (happens on every render):
+
+```typescript
+const weeks = generateCalendarDays(
+  visibleYear,     // What year we're viewing
+  visibleMonth,    // What month we're viewing
+  todayYMD,        // What day is today (for highlighting)
+  selectedDate,    // What day user clicked (for highlighting)
+  taskCounts       // Task data from parent (App.tsx)
+);
+```
+
+**When does this re-run?**
+- User clicks < or > (changes visibleMonth)
+- User selects a date (changes selectedDate)
+- Midnight occurs (changes todayYMD)
+- Parent provides new taskCounts
+
+### Midnight Detection (Advanced Feature):
+
+```typescript
+useEffect(() => {
+  // Function to check if date changed
+  const checkMidnight = () => {
+    const newToday = getTodayYMD();
+    if (newToday !== todayYMD) {
+      setTodayYMD(newToday);  // Update today marker
+    }
+  };
+  
+  // Check every minute
+  const interval = setInterval(checkMidnight, 60000);
+  
+  // Also check when tab becomes visible
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      checkMidnight();  // User came back, check date
+    }
+  };
+  
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  return () => {
+    clearInterval(interval);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [todayYMD]);
+```
+
+**Scenario**: User opens app on October 5 at 11:50 PM
+1. `todayYMD` = "2026-10-05"
+2. October 5 has accent border (isToday = true)
+3. User keeps app open past midnight
+4. Timer fires, detects new date
+5. `setTodayYMD("2026-10-06")` called
+6. Calendar re-generates
+7. October 6 now has accent border
+
+### Navigation Actions:
+
+```typescript
+const goToPreviousMonth = () => {
+  const prev = getPreviousMonth(visibleYear, visibleMonth);
+  setVisibleYear(prev.year);    // Update both year and month
+  setVisibleMonth(prev.month);
+};
+
+// Example:
+// Current: October 2026
+// Click <
+// → September 2026
+
+// Current: January 2026
+// Click <
+// → December 2025  (year changes!)
+```
+
+### Hook Return Value:
+
+```typescript
+return {
+  // State (for UI to read)
+  todayYMD,         // "2026-10-05"
+  visibleYear,      // 2026
+  visibleMonth,     // 9
+  selectedDate,     // "2026-10-15" or null
+  weeks,            // CalendarWeek[] (the grid data)
+  
+  // Actions (for UI to call)
+  goToPreviousMonth,
+  goToNextMonth,
+  goToToday,
+  selectDate,
 };
 ```
 
-The calendar should operate on this normalized representation rather than passing around multiple date formats.
-
 ---
 
-## 3. Calendar Dates Use `YYYY-MM-DD`
+## 🎨 Layer 4: MonthCalendar.tsx (UI Component)
 
-For a calendar **day**, use:
+This component **renders** the calendar using data from the hook.
 
-```text
-YYYY-MM-DD
+### Component Flow:
+
+```typescript
+export function MonthCalendar({ taskCounts, onDateSelect }: Props) {
+  // 1. Get calendar state from hook
+  const {
+    visibleYear,
+    visibleMonth,
+    selectedDate,
+    weeks,              // ← The grid data!
+    goToPreviousMonth,
+    goToNextMonth,
+    selectDate,
+  } = useCalendar(taskCounts);  // ← Pass in task counts
+  
+  // 2. Handle date clicks
+  const handleDateClick = (date: string) => {
+    selectDate(date);           // Update hook state
+    onDateSelect?.(date);       // Notify parent (App.tsx)
+  };
+  
+  // 3. Render...
+}
 ```
 
-Example:
+### Rendering Logic:
 
-```text
-2026-10-05
+```jsx
+{/* Header with navigation */}
+<div>
+  <h3>{getMonthName(visibleMonth)} {visibleYear}</h3>
+  <button onClick={goToPreviousMonth}><ChevronLeft /></button>
+  <button onClick={goToNextMonth}><ChevronRight /></button>
+</div>
+
+{/* Weekday labels */}
+<div>
+  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(...)}
+</div>
+
+{/* Calendar grid */}
+{weeks.map((week) => (
+  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+    {week.days.map((day) => (
+      <CalendarDayCell
+        day={day}
+        isSelected={day.date === selectedDate}
+        onClick={() => handleDateClick(day.date)}
+      />
+    ))}
+  </div>
+))}
 ```
 
-This represents a calendar date rather than a timestamp.
-
-Avoid using different representations for the same concept, such as:
-
-```text
-10/05/2026
-2026-10-05
-Date object
-Unix timestamp
-```
-
-unless there is a specific reason.
-
----
-
-## 4. Today, Selected Date, and Visible Month Are Independent
-
-These are three different concepts.
-
-### Today
-
-The actual current local date.
-
-```text
-today = 2026-10-01
-```
-
-### Selected Date
-
-The date currently selected by the user.
-
-```text
-selectedDate = 2026-10-15
-```
-
-### Visible Month
-
-The month currently displayed by the calendar.
-
-```text
-visibleMonth = October 2026
-```
-
-Changing one must not implicitly change the others unless explicitly required by the UX.
-
-Example:
-
-```text
-Today:        October 1
-Selected:     October 15
-Visible:      October 2026
-```
-
-The user should be able to navigate to another month without changing what "today" means.
-
----
-
-## 5. Midnight Is a Calendar Boundary
-
-The application must recognize when the local calendar date changes.
-
-Example:
-
-```text
-October 1, 11:59:59 PM
-          ↓
-October 2, 12:00:00 AM
-```
-
-The `today` state should eventually update to October 2.
-
-This matters even when the application remains open across midnight.
-
-However, the selected date should **not automatically change just because midnight occurred**.
-
-Example:
-
-```text
-Before midnight:
-today = Oct 1
-selectedDate = Oct 15
-
-After midnight:
-today = Oct 2
-selectedDate = Oct 15
-```
-
-Whether the application follows today's date automatically is a separate UX decision.
-
----
-
-## 6. App Reopening Must Recalculate Today
-
-The application must not rely exclusively on a timer to determine the current date.
-
-If the application was closed:
-
-```text
-Oct 1 → application closed
-       ↓
-Oct 2 → application opened
-```
-
-the calendar should immediately determine the current date from the system clock.
-
-The midnight timer is only necessary for an already-open application.
-
----
-
-## 7. Calendar Must Handle Month Boundaries
-
-Month generation must correctly handle:
-
-```text
-January → December
-December → January
-```
-
-and automatically update the year.
-
-Example:
-
-```text
-December 2026
-      ↓
-January 2027
-```
-
-No hardcoded month/year transitions.
-
----
-
-## 8. Calendar Must Handle Variable Month Length
-
-The implementation must support:
-
-```text
-28 days
-29 days
-30 days
-31 days
-```
-
-without hardcoding the number of days for each month.
-
----
-
-## 9. Leap Years Must Be Supported
-
-February must correctly handle leap years.
-
-Example:
-
-```text
-2028 → February 29
-2027 → February 28
-```
-
-Leap-year behavior should come from the date calculation logic rather than manually maintained conditions wherever possible.
-
----
-
-## 10. Previous and Next Month Days
-
-The calendar may render days belonging to the previous or next month in the current grid.
-
-Example:
-
-```text
-Sun Mon Tue Wed Thu Fri Sat
-27  28  29  30   1   2   3
-```
-
-Those dates are valid calendar cells but should be distinguishable using:
-
-```ts
-isCurrentMonth
-```
-
-Example:
-
-```ts
-{
-  date: "2026-09-30",
-  dayNumber: 30,
-  isCurrentMonth: false
+### CalendarDayCell (Individual Date Cell):
+
+```typescript
+function CalendarDayCell({ day, isSelected, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        border: day.isToday 
+          ? '2px solid var(--accent)'      // Today → orange border
+          : isSelected 
+            ? '2px solid var(--primary)'    // Selected → teal border
+            : '1px solid var(--border)',    // Normal → gray border
+        
+        backgroundColor: day.isToday
+          ? 'rgba(211, 94, 54, 0.05)'      // Today → light orange bg
+          : isSelected
+            ? 'rgba(42, 67, 67, 0.05)'      // Selected → light teal bg
+            : 'transparent',
+        
+        opacity: day.isCurrentMonth ? 1 : 0.4,  // Dim prev/next month
+      }}
+    >
+      {/* Day number */}
+      <div>{day.dayNumber}</div>
+      
+      {/* Task count badge */}
+      {day.taskCount > 0 && (
+        <div>
+          {day.taskCount > 99 ? '99+' : day.taskCount}
+        </div>
+      )}
+    </div>
+  );
 }
 ```
 
 ---
 
-## 11. Task Count Is Optional Calendar Metadata
+## 🔄 Complete Data Flow Example
 
-The calendar only needs a lightweight task count for each date.
+Let's trace a real scenario from start to finish:
 
-Example:
+### Scenario: User opens app, clicks on October 15
 
-```ts
-{
-  date: "2026-10-05",
-  taskCount: 3
+#### 1. **App.tsx (Parent) starts**
+```typescript
+// Calculate task counts
+const taskCountsByDate = {
+  "2026-10-05": 3,
+  "2026-10-07": 2,
+  "2026-10-15": 5
+};
+
+// Render calendar
+<MonthCalendar 
+  taskCounts={taskCountsByDate}
+  onDateSelect={handleDateSelect}
+/>
+```
+
+#### 2. **MonthCalendar receives props**
+```typescript
+function MonthCalendar({ taskCounts, onDateSelect }) {
+  const { weeks, selectDate, ... } = useCalendar(taskCounts);
+  // ...
 }
 ```
 
-The calendar does not need the complete task list just to render the monthly overview.
+#### 3. **useCalendar hook initializes**
+```typescript
+// Initial state
+todayYMD = "2026-10-05"  // from getTodayYMD()
+visibleYear = 2026        // from new Date().getFullYear()
+visibleMonth = 9          // from new Date().getMonth()
+selectedDate = null       // nothing selected yet
+```
 
-Task fetching for a selected date will be designed separately.
+#### 4. **generateCalendarDays is called**
+```typescript
+const weeks = generateCalendarDays(
+  2026,  // visibleYear
+  9,     // visibleMonth
+  "2026-10-05",  // todayYMD
+  null,          // selectedDate
+  { "2026-10-05": 3, "2026-10-07": 2, "2026-10-15": 5 }
+);
+
+// Returns:
+[
+  { days: [Sep27, Sep28, Sep29, Sep30, Oct1, Oct2, Oct3] },
+  { days: [Oct4, Oct5(isToday=true, taskCount=3), Oct6, Oct7(taskCount=2), ...] },
+  { days: [Oct11, Oct12, Oct13, Oct14, Oct15(taskCount=5), ...] },
+  // ... more weeks
+]
+```
+
+#### 5. **UI renders the grid**
+```
+Week 2: [4] [5*] [6] [7] [8] [9] [10]
+             ↑    ↑
+          Today  Has
+         Orange  tasks
+         border   (2)
+
+Week 3: [11] [12] [13] [14] [15] [16] [17]
+                               ↑
+                            Has tasks
+                              (5)
+```
+
+#### 6. **User clicks on October 15**
+```typescript
+// handleDateClick is called
+handleDateClick("2026-10-15")
+
+// Which calls:
+selectDate("2026-10-15")  // Update hook state
+onDateSelect?.("2026-10-15")  // Notify App.tsx
+```
+
+#### 7. **Hook state updates**
+```typescript
+selectedDate: null → "2026-10-15"
+```
+
+#### 8. **Calendar re-generates**
+```typescript
+const weeks = generateCalendarDays(
+  2026,
+  9,
+  "2026-10-05",
+  "2026-10-15",  // ← Now has selected date!
+  taskCounts
+);
+
+// Oct 15 now has:
+{
+  date: "2026-10-15",
+  dayNumber: 15,
+  isToday: false,
+  isSelected: true,  // ← Changed!
+  isCurrentMonth: true,
+  taskCount: 5
+}
+```
+
+#### 9. **UI re-renders with new highlight**
+```
+Week 3: [11] [12] [13] [14] [15◆] [16] [17]
+                               ↑
+                          Selected!
+                          Teal border
+                          Badge shows: 5
+```
 
 ---
 
-## 12. Zero Tasks Should Not Be Treated as a Special Calendar State
+## 🎯 Key Design Principles
 
-A date with no tasks should simply have:
-
-```ts
-taskCount: 0
+### 1. **Separation of Concerns**
+```
+dateUtils       → Pure date math
+calendarGenerator → Pure grid logic
+useCalendar     → React state
+MonthCalendar   → UI presentation
 ```
 
-The UI can decide whether to display anything.
+### 2. **Single Responsibility**
+- `dateUtils` only handles dates
+- `calendarGenerator` only creates grid data
+- `useCalendar` only manages state
+- `MonthCalendar` only renders UI
 
-For example:
-
-```tsx
-{taskCount > 0 && <TaskCountBadge />}
+### 3. **Testability**
+```typescript
+// Easy to test pure functions
+test('generateCalendarDays for October 2026', () => {
+  const weeks = generateCalendarDays(2026, 9, '2026-10-05', null, {});
+  expect(weeks.length).toBe(6);
+  expect(weeks[0].days[0].date).toBe('2026-09-27');
+  expect(weeks[1].days[1].isToday).toBe(true);
+});
 ```
 
-The calendar's data model should still retain `0`.
-
----
-
-## 13. Large Task Counts Must Not Break the Calendar Layout
-
-The calendar cell must remain visually stable even when a date has many tasks.
-
-Potential UI representation:
-
-```text
-1
-7
-42
-99+
+### 4. **Unidirectional Data Flow**
+```
+App.tsx (taskCounts)
+    ↓
+MonthCalendar (props)
+    ↓
+useCalendar (hook)
+    ↓
+generateCalendarDays (pure function)
+    ↓
+dateUtils (utilities)
 ```
 
-The exact visual treatment is a UI decision, but task counts should never determine the size of the calendar cell.
-
----
-
-## 14. Calendar Generation Should Be Pure
-
-The calendar-date generation logic should ideally be independent of React.
-
-Conceptually:
-
-```ts
-generateCalendarDays(year, month)
-```
-
-should receive inputs and return calendar data.
-
-Example:
-
-```ts
-const days = generateCalendarDays(2026, 9);
-```
-
-It should not:
-
-* Fetch tasks
-* Modify React state
-* Access the DOM
-* Perform API requests
-* Depend on component lifecycle
-
-This makes the date-generation algorithm easy to test independently.
-
----
-
-## 15. Calendar UI Should Not Contain Business Logic
-
-Avoid putting logic such as:
-
-```text
-fetch tasks
-calculate task statistics
-update backend
-apply task completion rules
-```
-
-inside the calendar rendering components.
-
-Prefer:
-
-```text
-Data / State
-     ↓
-Calendar Logic
-     ↓
-CalendarDay[]
-     ↓
-Calendar UI
-```
-
-This keeps the UI layer simple.
-
----
-
-## 16. Date and Time Must Be Distinguished
-
-A calendar date such as:
-
-```text
-2026-10-05
-```
-
-is different from a timestamp such as:
-
-```text
-2026-10-05T14:30:00+05:30
-```
-
-The Calendar module currently deals primarily with **calendar dates**.
-
-Time-based task scheduling will be handled as a separate concern when required.
-
----
-
-# Current Scope
-
-For the first Calendar implementation, we only need to solve:
-
-* Month generation
-* Previous/next month cells
-* Month navigation
-* Today detection
-* Selected date
-* Visible month
-* Task count placeholder
-* Correct date transitions
-* Midnight/date rollover behavior
-
-## Explicitly Out of Scope for Now
-
-* Fetching full task objects
-* Task creation
-* Task editing
-* Drag and drop
-* Task resizing
-* Time-slot calendar
-* Backend integration
-* Task completion logic
-* Task synchronization
-* Notifications/reminders
-
-These should be designed separately rather than prematurely coupling them to the Calendar module.
-
----
-
-# Core Principle
-
-> **The Calendar is a date visualization system, not a task-management system.**
-
-Tasks are data associated with dates.
-
-The Calendar's primary responsibility is to correctly answer:
-
-```text
-What dates should be displayed?
-Where should each date appear?
-Which date is today?
-Which date is selected?
-Which month is visible?
-How many tasks are associated with each date?
-```
-
-Everything beyond those responsibilities should be introduced as a separate module or layer.
+This architecture makes the calendar:
+- **Easy to understand** (each layer has one job)
+- **Easy to test** (pure functions)
+- **Easy to maintain** (change one layer without breaking others)
+- **Easy to extend** (add features without rewriting core logic)
